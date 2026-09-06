@@ -3,6 +3,8 @@
 # ==========================================
 # Fuze MOTD Script
 # Размещение: /etc/profile.d/motd.sh
+# Использование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh"
+# Вместо My Server напишите своё понятное имя сервера
 # ==========================================
 
 SERVER_NAME="My Server"
@@ -40,9 +42,15 @@ fi
 source /etc/os-release 2>/dev/null
 OS_NAME="${PRETTY_NAME:-Linux}"
 
-# 5. Сетевая информация (IPv4/IPv6)
-IPv4=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -n 1)
-IPv6=$(ip -6 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -n 1)
+# 5. Сетевая информация (IPv4/IPv6) - ИСПРАВЛЕНО
+# Получаем все IPv4 адреса
+IPv4_ALL=$(ip -4 addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v "^127\.0\.0\.1$" | head -n 10)
+# Получаем все IPv6 адреса
+IPv6_ALL=$(ip -6 addr show | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v "^::1$" | head -n 10)
+
+# Берем первый из всех доступных (основной)
+IPv4=$(echo "$IPv4_ALL" | head -n 1)
+IPv6=$(echo "$IPv6_ALL" | head -n 1)
 
 # 6. Системные метрики
 UPTIME_STR=$(uptime -p 2>/dev/null | sed 's/up //')
@@ -83,11 +91,25 @@ echo -e "  Операционная система:  ${GREEN}${OS_NAME}${RESET}"
 echo
 
 # Сеть
-if [ -n "$IPv4" ]; then
-    echo -e "  IPv4 адрес:           ${GREEN}${IPv4}${RESET}"
+if [ -n "$IPv4_ALL" ]; then
+    FIRST_IPV4=$(echo "$IPv4_ALL" | head -n 1)
+    OTHER_IPV4=$(echo "$IPv4_ALL" | tail -n +2)
+    echo -e "  IPv4 адреса:          ${GREEN}${FIRST_IPV4}${RESET}"
+    if [ -n "$OTHER_IPV4" ]; then
+        echo "$OTHER_IPV4" | while read -r ip; do
+            echo -e "                        ${GREEN}${ip}${RESET}"
+        done
+    fi
 fi
-if [ -n "$IPv6" ]; then
-    echo -e "  IPv6 адрес:           ${GREEN}${IPv6}${RESET}"
+if [ -n "$IPv6_ALL" ]; then
+    FIRST_IPV6=$(echo "$IPv6_ALL" | head -n 1)
+    OTHER_IPV6=$(echo "$IPv6_ALL" | tail -n +2)
+    echo -e "  IPv6 адреса:          ${GREEN}${FIRST_IPV6}${RESET}"
+    if [ -n "$OTHER_IPV6" ]; then
+        echo "$OTHER_IPV6" | while read -r ip; do
+            echo -e "                       ${GREEN}${ip}${RESET}"
+        done
+    fi
 fi
 echo
 
