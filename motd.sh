@@ -4,6 +4,7 @@
 # Fuze MOTD Script
 # Размещение: /etc/profile.d/motd.sh
 # Использование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh"
+# или сразу редуктирование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh" && nano "/etc/profile.d/motd.sh"
 # Вместо My Server напишите своё понятное имя сервера
 # ==========================================
 
@@ -107,7 +108,7 @@ if [ -n "$IPv6_ALL" ]; then
     echo -e "  IPv6 адреса:          ${GREEN}${FIRST_IPV6}${RESET}"
     if [ -n "$OTHER_IPV6" ]; then
         echo "$OTHER_IPV6" | while read -r ip; do
-            echo -e "                       ${GREEN}${ip}${RESET}"
+            echo -e "                        ${GREEN}${ip}${RESET}"
         done
     fi
 fi
