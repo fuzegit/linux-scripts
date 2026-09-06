@@ -4,7 +4,7 @@
 # Fuze MOTD Script
 # Размещение: /etc/profile.d/motd.sh
 # Использование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh"
-# или сразу редуктирование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh" && nano "/etc/profile.d/motd.sh"
+# или сразу редактирование: curl -fsSL "https://raw.githubusercontent.com/fuzegit/linux-scripts/refs/heads/main/motd.sh" -o "/etc/profile.d/motd.sh" && chmod +x "/etc/profile.d/motd.sh" && nano "/etc/profile.d/motd.sh"
 # Вместо My Server напишите своё понятное имя сервера
 # ==========================================
 
