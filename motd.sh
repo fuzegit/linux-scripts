@@ -31,7 +31,7 @@ else
 fi
 
 # 3. Чистка экрана (прокрутка вверх на высоту терминала)
-LINES=$(stty size | awk '{print $1}')
+LINES=$(stty size 2>/dev/null | awk '{print $1}')
 if [ -n "$LINES" ] && [ "$LINES" -gt 0 ] 2>/dev/null; then
     for ((i=0; i<LINES; i++)); do
         echo ''
@@ -39,29 +39,44 @@ if [ -n "$LINES" ] && [ "$LINES" -gt 0 ] 2>/dev/null; then
     tput cuu $LINES 2>/dev/null
 fi
 
-# 4. Сбор информации о системе
-source /etc/os-release 2>/dev/null
-OS_NAME="${PRETTY_NAME:-Linux}"
+# 4. Сбор информации о системе (безопасное чтение)
+if [ -f /etc/os-release ]; then
+    OS_NAME=$(grep -m1 '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d'"' -f2)
+fi
+OS_NAME="${OS_NAME:-Linux}"
+KERNEL=$(uname -r 2>/dev/null)
+ARCH=$(uname -m 2>/dev/null)
+LOCAL_DATE=$(date '+%d.%m.%Y %H:%M:%S')
+if [ -f /etc/timezone ]; then
+    TIMEZONE=$(cat /etc/timezone)
+elif [ -L /etc/localtime ]; then
+    TIMEZONE=$(readlink /etc/localtime | sed 's|.*/zoneinfo/||')
+else
+    TIMEZONE=$(date +%Z)
+fi
 
-# 5. Сетевая информация (IPv4/IPv6) - ИСПРАВЛЕНО
-# Получаем все IPv4 адреса
-IPv4_ALL=$(ip -4 addr show | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v "^127\.0\.0\.1$" | head -n 10)
-# Получаем все IPv6 адреса
-IPv6_ALL=$(ip -6 addr show | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v "^::1$" | head -n 10)
-
+# 5. Сетевая информация (IPv4/IPv6)
+# Получем все IPv4 адреса
+IPv4_ALL=$(ip -4 addr show 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v "^127\.0\.0\.1$" | head -n 10)
+# Получем все IPv6 адреса
+IPv6_ALL=$(ip -6 addr show 2>/dev/null | awk '/inet6 / {print $2}' | cut -d/ -f1 | grep -v "^::1$" | head -n 10)
 # Берем первый из всех доступных (основной)
 IPv4=$(echo "$IPv4_ALL" | head -n 1)
 IPv6=$(echo "$IPv6_ALL" | head -n 1)
 
 # 6. Системные метрики
 UPTIME_STR=$(uptime -p 2>/dev/null | sed 's/up //')
-LOAD_AVG=$(cut -d ' ' -f1 /proc/loadavg)
-RAM_AVAILABLE_MB=$(free -m | awk '/^Mem/ {print $7}')
-DISK_FREE_GB=$(df -h / | awk 'NR==2 {print $4}')
+LOAD_AVG=$(cut -d ' ' -f1 /proc/loadavg 2>/dev/null)
+RAM_AVAILABLE_MB=$(free -m 2>/dev/null | awk '/^Mem/ {print $7}')
+RAM_TOTAL_MB=$(free -m 2>/dev/null | awk '/^Mem/ {print $2}')
+DISK_FREE_GB=$(df -h / 2>/dev/null | awk 'NR==2 {print $4}')
+DISK_TOTAL_GB=$(df -h / 2>/dev/null | awk 'NR==2 {print $2}')
 
 # 7. Клиентский IP (при SSH-соединении)
 if [ -n "$SSH_CLIENT" ]; then
     CLIENT_IP=$(echo "$SSH_CLIENT" | awk '{print $1}')
+elif [ -n "$SSH_CLIENT6" ]; then
+    CLIENT_IP=$(echo "$SSH_CLIENT6" | awk '{print $1}')
 else
     CLIENT_IP="Локальная сессия"
 fi
@@ -80,7 +95,6 @@ ACTIVE_SESSIONS=$(who 2>/dev/null)
 # ==========================================
 # Вывод информации
 # ==========================================
-
 echo
 echo -e "${CYAN}=============================================================="
 echo -e "${GREEN}                    ${SERVER_NAME}                           "
@@ -88,7 +102,8 @@ echo -e "${CYAN}=============================================================="
 echo
 
 # Информация о системе
-echo -e "  Операционная система:  ${GREEN}${OS_NAME}${RESET}"
+echo -e "  Операционная система: ${GREEN}${OS_NAME}${RESET}"
+echo -e "  Ядро:                 ${GREEN}${KERNEL} (${ARCH})${RESET}"
 echo
 
 # Сеть
@@ -108,7 +123,7 @@ if [ -n "$IPv6_ALL" ]; then
     echo -e "  IPv6 адреса:          ${GREEN}${FIRST_IPV6}${RESET}"
     if [ -n "$OTHER_IPV6" ]; then
         echo "$OTHER_IPV6" | while read -r ip; do
-            echo -e "                        ${GREEN}${ip}${RESET}"
+            echo -e "                       ${GREEN}${ip}${RESET}"
         done
     fi
 fi
@@ -120,8 +135,8 @@ echo -e "  Нагрузка (1 мин):     ${YELLOW}${LOAD_AVG:-Неизвес�
 echo
 
 # Ресурсы
-echo -e "  Доступная RAM:        ${GREEN}${RAM_AVAILABLE_MB:-?} MB${RESET}"
-echo -e "  Свободное место на /: ${GREEN}${DISK_FREE_GB:-?}${RESET}"
+echo -e "  Память:               ${GREEN}${RAM_AVAILABLE_MB}/${RAM_TOTAL_MB} MB${RESET}"
+echo -e "  Диск (/):             ${GREEN}${DISK_FREE_GB}/${DISK_TOTAL_GB} MB${RESET}"
 echo
 
 # Обновления
@@ -148,6 +163,11 @@ fi
 # Клиент
 echo -e "  Ваш IP (SSH):        ${RED}${CLIENT_IP}${RESET}"
 echo
+
+# Дата и время (дополнительно)
+echo -e "  Локальное время:     ${CYAN}${LOCAL_DATE} (${TIMEZONE})${RESET}"
+echo
+
 echo -e "${CYAN}=============================================================="
 echo
 echo -e "$RESET"
